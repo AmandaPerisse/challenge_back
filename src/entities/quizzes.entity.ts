@@ -1,16 +1,19 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
-@Entity()
-export class QuizModel {
+@Entity('quizzes')
+export class QuizzesEntity {
     @PrimaryGeneratedColumn()
     id: number
 
     @CreateDateColumn()
     date: Date
     
-    @Column()
+    @Column( { unique: true } )
     name: string;
 
     @Column()
     description: string;
+
+    @Column()
+    userId: number;
 }
