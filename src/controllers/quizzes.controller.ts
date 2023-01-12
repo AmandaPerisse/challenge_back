@@ -10,6 +10,8 @@ import { AnswersEntity } from "src/entities/answers.entity";
 import { UsersQuizzesEntity } from "src/entities/usersQuizzes.entity";
 
 import { QuizzesSchema } from "src/schemas/quizzes.schema";
+import { QuizNameSchema } from "src/schemas/quizName.schema";
+import { UserIdSchema } from "src/schemas/userId.schema";
 
 @Controller('/quizzes')
 export class QuizzesController{
@@ -35,53 +37,55 @@ export class QuizzesController{
         return 'Quiz criado com sucesso.';
     }
 
-    @Get(':id') //retornar todos os quizzes
+    @Get(':id') 
     public async getQuizzes(@Param('id', ParseIntPipe) id: number): Promise<object> {
+        
         const userQuizzes = await this.quizzes.find( { select: { name: true }, where: { userId: id } });
-        //quizzes do usuário
+      
         const availableQuizzes = await this.quizzes.find( { select: { name: true }, where: { userId: Not(id) } });
-        //quizzes disponiveis
+      
         const answeredQuizzesId = await this.userAnswer.find( { select: { quizId: true }, where: { userId: id } });
-        //quizzes respondidos
+     
         let answeredQuizzesNames = [];
         for(let i = 0; i<= answeredQuizzesId.length-1; i++){
-            answeredQuizzesNames.push(await this.quizzes.find( { select: { name: true }, where: { id: answeredQuizzesId[i].quizId } }));
+            let query = await this.quizzes.find( { select: { name: true }, where: { id: answeredQuizzesId[i].quizId } })
+            answeredQuizzesNames.push(query[0].name);
         }
         const quizzes =  { userQuizzes: userQuizzes, availableQuizzes: availableQuizzes, answeredQuizzes: answeredQuizzesNames }
         return quizzes;
     }
 
-    /*@Get('/available/:id') //quizzes disponiveis
-    public async getQuizzesAvailable(@Param('id', ParseIntPipe) id: number): Promise<object> {
-        if(!quizzes){
-            return null;
-        }
-        return quizzes;
+    @Post('/quiz/save') 
+    public async saveAnswer(@Body() body: UserIdSchema): Promise<string> {
+        let answer = (await this.userAnswer.save({ userId: body.userId , quizId: body.quizId}));
+        return "Sucesso."
     }
 
-    @Get('/answered/:id') //quizzes respondidos
-    public async getQuizzesAnswered(@Param('id', ParseIntPipe) id: number): Promise<object> {
-        
-        if(!quizzes){
-            throw new NotFoundException();
-        }
-        
-        if(!quizzesAnswered){
-            return null;
-        }
-        return quizzesAnswered;
-    }*/
+    @Post('/quiz')
+    public async getQuiz(@Body() body: QuizNameSchema): Promise<object> {
 
-    /*@Post()
-    public async create(@Body() body: QuizzesSchema): Promise<QuizzesEntity>{
-        return this.model.save(body);
-        return 'Quiz criado com sucesso.';
+        const quiz = await this.quizzes.find( { select: { id: true }, where: { name: body.name } });
 
-        for(let i = 0; i<= quizzes.length-1; i++){
-            const questions = await this.questions.find( { where:{ quizId: quizzes[i].id } });
-            for(let j=0; j<= questions.length-1; j++){
-                const answers = await this.answers.find( { where:{ questionId: questions[j].id } });
-            }
+        const questions = await this.questions.find( { select: { id: true, description: true }, where: { quizId: quiz[0].id } });
+
+        let answers = [];
+        for(let i = 0; i<= questions.length-1; i++){
+            let query = await this.answers.find( { select: { description: true }, where: { questionId: questions[i].id } })
+            answers.push(query);
         }
-    }*/
+        const completedQuiz =  { quizId: quiz[0].id, title: body.name, questions: questions, answers: answers }
+        return completedQuiz;
+    }
+
+    @Delete('/quiz')
+    public async deleteQuiz(@Body() body: QuizNameSchema): Promise<string> {
+        let quiz = await this.quizzes.find({where:{ name: body.name }}); 
+        await this.quizzes.delete({ name: body.name });        
+        let question = await this.questions.find({where:{ quizId: quiz[0].id }});
+        await this.questions.delete({ quizId: quiz[0].id });
+        let answers = await this.answers.find({where:{ questionId: question[0].id }});
+        await this.answers.delete({ questionId: question[0].id });
+        await this.userAnswer.delete({ quizId: quiz[0].id });
+        return "Sucesso";
+    }
 }
