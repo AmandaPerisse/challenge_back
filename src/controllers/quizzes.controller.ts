@@ -2,7 +2,7 @@ import { Controller, Post, Get, Delete, Body, Param } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, Not } from 'typeorm';
 import { ParseIntPipe } from "@nestjs/common/pipes";
-import { NotFoundException } from "@nestjs/common/exceptions";
+import { ApiOperation, ApiTags } from "@nestjs/swagger/dist";
 
 import { QuizzesEntity } from "src/entities/quizzes.entity";
 import { QuestionsEntity } from "src/entities/questions.entity";
@@ -14,6 +14,7 @@ import { QuizNameSchema } from "src/schemas/quizName.schema";
 import { UserIdSchema } from "src/schemas/userId.schema";
 
 @Controller('/quizzes')
+@ApiTags('quizzes')
 export class QuizzesController{
 
     constructor(
@@ -25,6 +26,7 @@ export class QuizzesController{
     ) {}
 
     @Post()
+    @ApiOperation({ summary: 'Create complete quizzes. (quizzes, questions and answers)' })
     public async create(@Body() body: QuizzesSchema): Promise<string>{
         const quiz = (await this.quizzes.save({ name: body.nameQuiz, description: body.descriptionQuiz, userId: body.userId }));
         const questionsArr = body.questions;
@@ -38,6 +40,7 @@ export class QuizzesController{
     }
 
     @Get(':id') 
+    @ApiOperation({ summary: 'Get quizzes created by the user logged in, quizzes that the user has answered and quizzes that are available.' })
     public async getQuizzes(@Param('id', ParseIntPipe) id: number): Promise<object> {
         
         const userQuizzes = await this.quizzes.find( { select: { name: true }, where: { userId: id } });
@@ -56,12 +59,14 @@ export class QuizzesController{
     }
 
     @Post('/quiz/save') 
+    @ApiOperation({ summary: 'Store when user answered a quiz.'})
     public async saveAnswer(@Body() body: UserIdSchema): Promise<string> {
         let answer = (await this.userAnswer.save({ userId: body.userId , quizId: body.quizId}));
         return "Sucesso."
     }
 
     @Post('/quiz')
+    @ApiOperation({ summary: 'Get chosen quiz to be answered.'})
     public async getQuiz(@Body() body: QuizNameSchema): Promise<object> {
 
         const quiz = await this.quizzes.find( { select: { id: true }, where: { name: body.name } });
@@ -78,6 +83,7 @@ export class QuizzesController{
     }
 
     @Delete('/quiz')
+    @ApiOperation({ summary: 'Delete a chosen quiz. (quizzes, answers and questions)'})
     public async deleteQuiz(@Body() body: QuizNameSchema): Promise<string> {
         let quiz = await this.quizzes.find({where:{ name: body.name }}); 
         await this.quizzes.delete({ name: body.name });        

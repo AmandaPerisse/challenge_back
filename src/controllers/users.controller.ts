@@ -1,13 +1,14 @@
 import { Controller, Post, Body, NotFoundException, ConflictException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from 'typeorm';
-import bcrypt from 'bcrypt';
+import { ApiOperation, ApiTags } from "@nestjs/swagger/dist";
 
 import { UsersEntity } from "src/entities/users.entity";
 
 import { UsersSchemaLogin, UsersSchemaSingUp } from "src/schemas/users.schema";
 
 @Controller()
+@ApiTags('users')
 export class UsersController{
 
     constructor(
@@ -15,6 +16,7 @@ export class UsersController{
     ) {}
 
     @Post('/sign-in')
+    @ApiOperation({ summary: 'Sign-in with CPF and password'})
     public async getOne(@Body() body: UsersSchemaLogin): Promise<number>{
         
         const user = await this.users.findOne({ where: { cpf: body.cpf } })
@@ -30,6 +32,7 @@ export class UsersController{
     }
 
     @Post('/sign-up')
+    @ApiOperation({ summary: 'Sign-up with CPF, name and password'})
     public async create(@Body() body: UsersSchemaSingUp): Promise<string>{
 
         const userObject = {name: body.name, password: body.password, cpf: body.cpf};
